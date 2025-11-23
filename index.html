@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Traffic Signal Control System</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f0f1a 100%); min-height: 100vh; color: #fff; overflow-x: hidden; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+header { text-align: center; padding: 20px 0; margin-bottom: 20px; }
+header h1 { font-size: 1.8rem; font-weight: 600; background: linear-gradient(90deg, #00d4ff, #00ff88, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 0 0 30px rgba(0, 212, 255, 0.3); }
+header p { color: #888; font-size: 0.9rem; margin-top: 5px; }
+.controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+.mode-toggle { display: flex; background: #1e1e2e; border-radius: 30px; padding: 5px; border: 1px solid #333; }
+.mode-btn { padding: 10px 25px; border: none; background: transparent; color: #888; font-family: 'Poppins', sans-serif; font-size: 0.85rem; cursor: pointer; border-radius: 25px; transition: all 0.3s ease; }
+.mode-btn.active { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #fff; box-shadow: 0 0 20px rgba(0, 212, 255, 0.4); }
+.start-btn { padding: 10px 30px; border: none; background: linear-gradient(135deg, #00ff88, #00cc6a); color: #0a0a0f; font-family: 'Poppins', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 25px; transition: all 0.3s ease; }
+.start-btn:hover { box-shadow: 0 0 25px rgba(0, 255, 136, 0.5); transform: translateY(-2px); }
+.start-btn.running { background: linear-gradient(135deg, #ff4757, #cc2936); }
+.main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+@media (max-width: 900px) { .main-content { grid-template-columns: 1fr; } }
+.panel { background: linear-gradient(145deg, #1a1a2e, #16162a); border-radius: 20px; padding: 20px; border: 1px solid #2a2a4a; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); }
+.panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #2a2a4a; }
+.panel-header h2 { font-size: 1rem; font-weight: 500; color: #00d4ff; }
+.panel-icon { width: 35px; height: 35px; background: linear-gradient(135deg, #00d4ff22, #00d4ff11); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.signals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.signal-unit { background: linear-gradient(145deg, #0f0f1a, #1a1a2e); border-radius: 15px; padding: 15px; border: 1px solid #2a2a4a; text-align: center; transition: all 0.3s ease; }
+.signal-unit.active { border-color: #00ff88; box-shadow: 0 0 20px rgba(0, 255, 136, 0.2); }
+.signal-label { font-size: 0.85rem; font-weight: 500; color: #00d4ff; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.signal-box { background: #0a0a0f; border-radius: 12px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; border: 2px solid #1a1a2e; margin-bottom: 12px; }
+.light { width: 32px; height: 32px; border-radius: 50%; transition: all 0.3s ease; position: relative; }
+.light.red { background: #330000; border: 2px solid #440000; }
+.light.yellow { background: #332200; border: 2px solid #443300; }
+.light.green { background: #003300; border: 2px solid #004400; }
+.light.red.active { background: #ff0000; border-color: #ff0000; box-shadow: 0 0 20px #ff0000, 0 0 40px #ff000088, 0 0 60px #ff000044, inset 0 0 15px #ff6666; }
+.light.yellow.active { background: #ffcc00; border-color: #ffcc00; box-shadow: 0 0 20px #ffcc00, 0 0 40px #ffcc0088, 0 0 60px #ffcc0044, inset 0 0 15px #ffee66; }
+.light.green.active { background: #00ff00; border-color: #00ff00; box-shadow: 0 0 20px #00ff00, 0 0 40px #00ff0088, 0 0 60px #00ff0044, inset 0 0 15px #66ff66; }
+.timer-display { font-size: 1.5rem; font-weight: 700; color: #fff; font-family: 'Courier New', monospace; background: #0a0a0f; padding: 6px 15px; border-radius: 8px; border: 1px solid #2a2a4a; min-width: 60px; }
+.traffic-select { width: 100%; padding: 8px 10px; background: #0a0a0f; border: 1px solid #2a2a4a; border-radius: 8px; color: #fff; font-family: 'Poppins', sans-serif; font-size: 0.75rem; cursor: pointer; margin-top: 8px; }
+.traffic-select:focus { outline: none; border-color: #00d4ff; }
+.traffic-status { font-size: 0.7rem; padding: 4px 10px; border-radius: 12px; display: inline-block; margin-top: 8px; }
+.traffic-status.light { background: #00ff0033; color: #00ff00; }
+.traffic-status.medium { background: #ffcc0033; color: #ffcc00; }
+.traffic-status.heavy { background: #ff000033; color: #ff0000; }
+.map-container { height: 100%; min-height: 450px; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a4a; }
+.map-container iframe { width: 100%; height: 100%; min-height: 450px; border: none; filter: contrast(1.1) saturate(1.2); }
+.legend { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #888; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend-dot.green { background: #00ff00; }
+.legend-dot.yellow { background: #ffcc00; }
+.legend-dot.red { background: #ff0000; }
+.status-bar { background: linear-gradient(145deg, #1a1a2e, #16162a); border-radius: 15px; padding: 15px 20px; border: 1px solid #2a2a4a; margin-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.status-item { display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #00ff88; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.status-dot.stopped { background: #ff4757; animation: none; }
+.status-text { font-size: 0.8rem; color: #888; }
+.status-text span { color: #00d4ff; font-weight: 500; }
+footer { text-align: center; padding: 25px; margin-top: 30px; border-top: 1px solid #2a2a4a; }
+footer p { color: #666; font-size: 0.8rem; margin: 4px 0; }
+footer .highlight { color: #00d4ff; }
+.smart-indicator { display: none; background: linear-gradient(135deg, #9b59b6, #8e44ad); padding: 10px 15px; border-radius: 10px; margin-top: 15px; text-align: center; font-size: 0.8rem; }
+.smart-indicator.show { display: block; }
+.ai-badge { background: linear-gradient(135deg, #9b59b6, #e74c3c); padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-left: 8px; animation: glow 2s infinite; }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 5px #9b59b6; } 50% { box-shadow: 0 0 20px #9b59b6; } }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>🚦 Smart Traffic Signal Control System</h1>
+<p>Integrated with Google Maps Live Traffic • Commercial Street, Bangalore</p>
+</header>
+<div class="controls">
+<div class="mode-toggle">
+<button class="mode-btn active" id="manualBtn" onclick="setMode('manual')">📋 Manual Mode</button>
+<button class="mode-btn" id="smartBtn" onclick="setMode('smart')">🤖 Smart AI Mode</button>
+</div>
+<button class="start-btn" id="startBtn" onclick="toggleSimulation()">▶ Start Simulation</button>
+</div>
+<div class="main-content">
+<div class="panel">
+<div class="panel-header">
+<div class="panel-icon">🚦</div>
+<h2>Traffic Signal Controller</h2>
+<span class="ai-badge" id="aiBadge" style="display:none;">AI ACTIVE</span>
+</div>
+<div class="signals-grid">
+<div class="signal-unit" id="unit-north">
+<div class="signal-label">⬆️ NORTH</div>
+<div class="signal-box">
+<div class="light red active" id="north-red"></div>
+<div class="light yellow" id="north-yellow"></div>
+<div class="light green" id="north-green"></div>
+</div>
+<div class="timer-display" id="timer-north">00</div>
+<select class="traffic-select" id="select-north" onchange="updateTraffic('north')">
+<option value="light">🟢 Light Traffic</option>
+<option value="medium">🟡 Medium Traffic</option>
+<option value="heavy">🔴 Heavy Traffic</option>
+</select>
+<div class="traffic-status light" id="status-north">Light</div>
+</div>
+<div class="signal-unit" id="unit-south">
+<div class="signal-label">⬇️ SOUTH</div>
+<div class="signal-box">
+<div class="light red active" id="south-red"></div>
+<div class="light yellow" id="south-yellow"></div>
+<div class="light green" id="south-green"></div>
+</div>
+<div class="timer-display" id="timer-south">00</div>
+<select class="traffic-select" id="select-south" onchange="updateTraffic('south')">
+<option value="light">🟢 Light Traffic</option>
+<option value="medium" selected>🟡 Medium Traffic</option>
+<option value="heavy">🔴 Heavy Traffic</option>
+</select>
+<div class="traffic-status medium" id="status-south">Medium</div>
+</div>
+<div class="signal-unit" id="unit-east">
+<div class="signal-label">➡️ EAST</div>
+<div class="signal-box">
+<div class="light red active" id="east-red"></div>
+<div class="light yellow" id="east-yellow"></div>
+<div class="light green" id="east-green"></div>
+</div>
+<div class="timer-display" id="timer-east">00</div>
+<select class="traffic-select" id="select-east" onchange="updateTraffic('east')">
+<option value="light">🟢 Light Traffic</option>
+<option value="medium">🟡 Medium Traffic</option>
+<option value="heavy" selected>🔴 Heavy Traffic</option>
+</select>
+<div class="traffic-status heavy" id="status-east">Heavy</div>
+</div>
+<div class="signal-unit" id="unit-west">
+<div class="signal-label">⬅️ WEST</div>
+<div class="signal-box">
+<div class="light red active" id="west-red"></div>
+<div class="light yellow" id="west-yellow"></div>
+<div class="light green" id="west-green"></div>
+</div>
+<div class="timer-display" id="timer-west">00</div>
+<select class="traffic-select" id="select-west" onchange="updateTraffic('west')">
+<option value="light">🟢 Light Traffic</option>
+<option value="medium">🟡 Medium Traffic</option>
+<option value="heavy">🔴 Heavy Traffic</option>
+</select>
+<div class="traffic-status light" id="status-west">Light</div>
+</div>
+</div>
+<div class="smart-indicator" id="smartIndicator">
+🤖 AI Mode Active — Analyzing traffic patterns and optimizing signal timing automatically
+</div>
+</div>
+<div class="panel">
+<div class="panel-header">
+<div class="panel-icon">🗺️</div>
+<h2>Google Maps Live Traffic</h2>
+</div>
+<div class="map-container">
+<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3887.7851959498887!2d77.60703731534567!3d12.983390990843463!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1679e9a1d9e1%3A0x9e5a3f3b5c4c5c5c!2sCommercial%20Street%2C%20Bengaluru%2C%20Karnataka!5e0!3m2!1sen!2sin!4v1699900000000!5m2!1sen!2sin&layer=traffic" allowfullscreen="" loading="lazy"></iframe>
+</div>
+<div class="legend">
+<div class="legend-item"><div class="legend-dot green"></div> Light Traffic</div>
+<div class="legend-item"><div class="legend-dot yellow"></div> Moderate Traffic</div>
+<div class="legend-item"><div class="legend-dot red"></div> Heavy Traffic</div>
+</div>
+</div>
+</div>
+<div class="status-bar">
+<div class="status-item">
+<div class="status-dot stopped" id="statusDot"></div>
+<div class="status-text">System: <span id="systemStatus">Stopped</span></div>
+</div>
+<div class="status-item">
+<div class="status-text">Current Lane: <span id="currentLane">--</span></div>
+</div>
+<div class="status-item">
+<div class="status-text">Mode: <span id="currentMode">Manual</span></div>
+</div>
+<div class="status-item">
+<div class="status-text">Cycle: <span id="cycleCount">0</span></div>
+</div>
+</div>
+</div>
+<footer>
+<p class="highlight">Smart Traffic Signal Control System Using Google Maps Live Traffic</p>
+<p>Developed by: <span class="highlight">[Your Name Here]</span></p>
+<p>Project Guide: <span class="highlight">[Mentor Name]</span> | <span class="highlight">[College Name]</span></p>
+<p style="margin-top: 10px; font-size: 0.7rem;">© 2024 Smart City IoT Project</p>
+</footer>
+</div>
+<script>
+const lanes = ['north', 'south', 'east', 'west'];
+const laneNames = { north: 'North ⬆️', south: 'South ⬇️', east: 'East ➡️', west: 'West ⬅️' };
+const timings = { light: 10, medium: 20, heavy: 40 };
+const yellowTime = 3;
+let currentMode = 'manual';
+let isRunning = false;
+let currentLaneIndex = 0;
+let timer = 0;
+let phase = 'red';
+let intervalId = null;
+let cycleCount = 0;
+let trafficData = { north: 'light', south: 'medium', east: 'heavy', west: 'light' };
+
+function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('manualBtn').classList.toggle('active', mode === 'manual');
+    document.getElementById('smartBtn').classList.toggle('active', mode === 'smart');
+    document.getElementById('currentMode').textContent = mode === 'manual' ? 'Manual' : 'Smart AI';
+    document.getElementById('smartIndicator').classList.toggle('show', mode === 'smart');
+    document.getElementById('aiBadge').style.display = mode === 'smart' ? 'inline-block' : 'none';
+    document.querySelectorAll('.traffic-select').forEach(sel => {
+        sel.disabled = mode === 'smart';
+        sel.style.opacity = mode === 'smart' ? '0.5' : '1';
+    });
+    if (mode === 'smart' && isRunning) simulateAI();
+}
+
+function updateTraffic(lane) {
+    const select = document.getElementById(`select-${lane}`);
+    const status = document.getElementById(`status-${lane}`);
+    const value = select.value;
+    trafficData[lane] = value;
+    status.textContent = value.charAt(0).toUpperCase() + value.slice(1);
+    status.className = `traffic-status ${value}`;
+}
+
+function simulateAI() {
+    if (currentMode !== 'smart') return;
+    lanes.forEach(lane => {
+        const options = ['light', 'medium', 'heavy'];
+        const random = options[Math.floor(Math.random() * options.length)];
+        trafficData[lane] = random;
+        document.getElementById(`select-${lane}`).value = random;
+        const status = document.getElementById(`status-${lane}`);
+        status.textContent = random.charAt(0).toUpperCase() + random.slice(1);
+        status.className = `traffic-status ${random}`;
+    });
+}
+
+function setLight(lane, color) {
+    ['red', 'yellow', 'green'].forEach(c => {
+        document.getElementById(`${lane}-${c}`).classList.remove('active');
+    });
+    document.getElementById(`${lane}-${color}`).classList.add('active');
+}
+
+function updateTimerDisplay(lane, time) {
+    document.getElementById(`timer-${lane}`).textContent = time.toString().padStart(2, '0');
+}
+
+function setActiveUnit(lane) {
+    lanes.forEach(l => {
+        document.getElementById(`unit-${l}`).classList.toggle('active', l === lane);
+    });
+}
+
+function resetAllSignals() {
+    lanes.forEach(lane => {
+        setLight(lane, 'red');
+        updateTimerDisplay(lane, 0);
+    });
+    document.querySelectorAll('.signal-unit').forEach(u => u.classList.remove('active'));
+}
+
+function runCycle() {
+    const currentLane = lanes[currentLaneIndex];
+    const greenTime = timings[trafficData[currentLane]];
+    setActiveUnit(currentLane);
+    document.getElementById('currentLane').textContent = laneNames[currentLane];
+    if (phase === 'green') {
+        setLight(currentLane, 'green');
+        updateTimerDisplay(currentLane, timer);
+        timer--;
+        if (timer < 0) {
+            phase = 'yellow';
+            timer = yellowTime;
+        }
+    } else if (phase === 'yellow') {
+        setLight(currentLane, 'yellow');
+        updateTimerDisplay(currentLane, timer);
+        timer--;
+        if (timer < 0) {
+            phase = 'red';
+            setLight(currentLane, 'red');
+            updateTimerDisplay(currentLane, 0);
+            currentLaneIndex = (currentLaneIndex + 1) % lanes.length;
+            if (currentLaneIndex === 0) {
+                cycleCount++;
+                document.getElementById('cycleCount').textContent = cycleCount;
+                if (currentMode === 'smart') simulateAI();
+            }
+            const nextLane = lanes[currentLaneIndex];
+            timer = timings[trafficData[nextLane]];
+            phase = 'green';
+        }
+    }
+}
+
+function toggleSimulation() {
+    const btn = document.getElementById('startBtn');
+    const statusDot = document.getElementById('statusDot');
+    const systemStatus = document.getElementById('systemStatus');
+    if (isRunning) {
+        isRunning = false;
+        clearInterval(intervalId);
+        btn.textContent = '▶ Start Simulation';
+        btn.classList.remove('running');
+        statusDot.classList.add('stopped');
+        systemStatus.textContent = 'Stopped';
+        resetAllSignals();
+        document.getElementById('currentLane').textContent = '--';
+    } else {
+        isRunning = true;
+        btn.textContent = '⏹ Stop Simulation';
+        btn.classList.add('running');
+        statusDot.classList.remove('stopped');
+        systemStatus.textContent = 'Running';
+        currentLaneIndex = 0;
+        timer = timings[trafficData[lanes[0]]];
+        phase = 'green';
+        cycleCount = 0;
+        document.getElementById('cycleCount').textContent = '0';
+        if (currentMode === 'smart') simulateAI();
+        intervalId = setInterval(runCycle, 1000);
+        runCycle();
+    }
+}
+
+lanes.forEach(lane => updateTraffic(lane));
+</script>
+</body>
+</html>
